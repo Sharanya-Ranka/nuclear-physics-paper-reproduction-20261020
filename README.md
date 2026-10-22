@@ -1,0 +1,1 @@
+An attempt to reproduce the paper modeling (𝛾, n) cross sections based on machine learning techniques (PINN + GBDT) [https://cea.hal.science/cea-05115470v1](https://cea.hal.science/cea-05115470v1)

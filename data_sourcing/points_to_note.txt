@@ -1,0 +1,62 @@
+Sourced datasets from 
+
+FILES_TO_DOWNLOAD = {
+    "mass_1.mas20.txt": "https://www-nds.iaea.org/amdc/ame2020/mass_1.mas20.txt",
+    "nubase_4.mas20.txt": "https://www-nds.iaea.org/amdc/ame2020/nubase_4.mas20.txt",
+}
+
+Did some sanity checks to ensure the parsing into csv from text files was correct.
+The values largely match. Sometimes though, we've stored numbers with :.5f (5 decimal places) instead of 6 decimal places which causes a round off
+
+Sn, Sp, S2n, S2p values are calculated (Sn = MassEnergy(Z, A-1) + MassEnergy(n) - MassEnergy(Z, A))
+Checked one element (V(23, 41) which nearly matches https://www-nds.iaea.org/amdc/ame2020/rct1.mas20.txt)
+May come back to look at calculated vs observed, or populate observed values.
+
+Calculated Sn values may be unpopulated if MassEnergy(Z, A-1) does not exist.
+ME in the table is MassExcess (which is the excess mass on top of the atomic mass number A for that element)
+
+---------------------------------------------------------------
+2026-10-21
+
+Finally figured out entries and subentries.
+We use 
+res = db.retrieve(ENTRY=ent, SUBENT=subent)
+subentry = res[ent][subent]
+
+to get the actual X4Subentry objects
+and then do
+reaction = subentry["BIB"]["REACTION"]
+to get the reaction specification.
+Curiously, the __repr__() and __str__() strings of reactions seem to be different
+An example:
+ipdb> all_reactions[-1]
+REACTION   (82-PB-207(G,N)82-PB-206,PAR,SIG)
+           for the transition to the ground state.
+ipdb> str(all_reactions[-1])
+'Partial cross section for 207Pb(gamma,n)206Pb'
+
+The __repr__() may hold some additional comments about the reaction.
+
+We now need to choose which subentries we will be scraping, and which we skip.
+the str(reaction) may be of several types - this is based on what the experiment is actually observing, and in many cases is not data we can directly use (even when they're talking about (gamma, n) reactions) 
+
+REACTIONS WE WANT
+
+Cross section for 237Np(gamma,n)236Np
+Partial cross section for 207Pb(gamma,n)206Pb
+    The repr() version of the partial reaction mentioned that it was only for ground state daughters
+
+REACTIONS WE DONT WANT
+
+((( Fission spectrum average Cross section for 237Np(n,2n)236Np )+( Fission spectrum average Cross section for 237Np(gamma,n)236Np ))/( Fission spectrum average Cross section for 237Np(n,gamma)238Np ))
+    A ratio (likely dimensionless) is measured
+
+Bremsstrahlung spectrum average Cross section for 96Ru(gamma,n)95Ru
+    Bremsstrahlung based experiments use photons (with a distribution of energies) created using high energy electrons hitting some substance. The value measured is inherently an integral (considering each photons energy and the relative quantity of it produced). So we do not use this, since we do not know the exact energy of the incident photon.
+
+(( Cross section for 206Pb(gamma,n)205Pb )+( Cross section for 206Pb(gamma,n+p)204Tl ))
+    Inherent sum of cross sections. In this case, Gemini tells me this is because the detectors used in the facilities could not detect protons, and hence you cannot separate these two reactions.
+
+    
+
+
