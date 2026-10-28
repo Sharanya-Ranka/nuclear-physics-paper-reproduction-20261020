@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from typing import Any, Dict, List, Optional
@@ -108,7 +109,25 @@ def extract_data_points(dataset) -> Optional[pd.DataFrame]:
         return None
 
 
-def run_pipeline():
+def make_df(dataset):
+    headings = pd.MultiIndex.from_tuples(
+        map(lambda x: (x[0], x[1]), zip(dataset.labels, dataset.units))
+    )
+    df = pd.DataFrame(dataset.data, columns=headings)
+    return df
+
+
+def make_json(df, reaction, dataset_key):
+    obj = dict(
+        metadata=dict(reaction=str(reaction), dataset_key=dataset_key),
+        columns=df.columns.tolist(),
+        values=df.values.tolist(),
+    )
+
+    return obj
+
+
+def main():
     print(
         f"Searching EXFOR for (g,n) reactions within mass range {MIN_A} <= A <= {MAX_A}..."
     )
@@ -123,20 +142,41 @@ def run_pipeline():
     collect = []
     not_collect = []
     all_reactions = []
+    all_data = []
+    breakpoint()
 
-    for ent, subentries in results.items():
+    for ent, subentries in list(results.items()):
         print(f"On entry: {ent}")
         for subent in subentries:
+            print(f"On subentry: {subent}")
             res = db.retrieve(ENTRY=ent, SUBENT=subent)
 
             try:
-                subentry = res[ent][subent]
-                reaction = subentry["BIB"]["REACTION"]
+                entry = res[ent]
+                # subentry = entry[subent]
+                # reaction = subentry["BIB"]["REACTION"]
                 # print(f"Enry: {ent}, Subentry: {subent}")
                 # print(f"Reaction: {reaction}")
-                all_reactions.append(reaction)
+                # all_reactions.append(reaction)
 
-                breakpoint()
+                datasets = entry.getSimplifiedDataSets()
+                for dataset_key, dataset in datasets.items():
+                    reaction = dataset.reaction[0]
+                    if not re.match(
+                        pattern=r"Cross section for .*", string=str(reaction)
+                    ) or re.search(
+                        pattern=r"electric|magnetic",
+                        string=str(reaction),
+                        flags=re.IGNORECASE,
+                    ):
+                        continue
+
+                    df = make_df(dataset)
+                    print(f"{str(dataset.reaction[0])}")
+                    print(df)
+                    json_obj = make_json(df, reaction, dataset_key)
+                    all_data.append(json_obj)
+                    # breakpoint()
 
                 # if re.match(pattern=r"Cross section for .*", string=reaction):
                 #     collect.append(reaction)
@@ -151,71 +191,74 @@ def run_pipeline():
         #     if len(res) > 0:
         #         breakpoint()
 
-    breakpoint()
-    y = exfor_entry.X4Entry(results["40950"])
-    # y.
-    # results = exfor.search(**search_query)
-    print(f"Total matching EXFOR reaction records retrieved: {len(results)}")
+    with open("data_processed/exfor_data_extracted.json", "w") as fp:
+        json.dump(all_data, fp, indent=2)
 
-    breakpoint()
+    # breakpoint()
+    # y = exfor_entry.X4Entry(results["40950"])
+    # # y.
+    # # results = exfor.search(**search_query)
+    # print(f"Total matching EXFOR reaction records retrieved: {len(results)}")
 
-    # Group datasets by target isotope to combine multi-lab EXFOR studies per isotope
-    isotopes_data: Dict[str, List[pd.DataFrame]] = {}
+    # breakpoint()
 
-    for entry in results:
-        target = entry.target
-        mass_a = parse_target_a(target)
+    # # Group datasets by target isotope to combine multi-lab EXFOR studies per isotope
+    # isotopes_data: Dict[str, List[pd.DataFrame]] = {}
 
-        # Filter: 30 <= A <= 250
-        if mass_a is None or not (MIN_A <= mass_a <= MAX_A):
-            continue
+    # for entry in results:
+    #     target = entry.target
+    #     mass_a = parse_target_a(target)
 
-        df_pts = extract_data_points(entry)
-        if df_pts is None or df_pts.empty:
-            continue
+    #     # Filter: 30 <= A <= 250
+    #     if mass_a is None or not (MIN_A <= mass_a <= MAX_A):
+    #         continue
 
-        if target not in isotopes_data:
-            isotopes_data[target] = []
-        isotopes_data[target].append(df_pts)
+    #     df_pts = extract_data_points(entry)
+    #     if df_pts is None or df_pts.empty:
+    #         continue
 
-    retained_isotopes = 0
-    manifest = []
+    #     if target not in isotopes_data:
+    #         isotopes_data[target] = []
+    #     isotopes_data[target].append(df_pts)
 
-    # Filter and export isotopes satisfying dataset threshold (> 20 valid points)
-    for target, dfs in isotopes_data.items():
-        combined_df = pd.concat(dfs, ignore_index=True)
-        # Drop duplicates across energy coordinate
-        combined_df = combined_df.drop_duplicates(
-            subset=["energy_MeV", "cross_section_mb"]
-        )
-        combined_df = combined_df.sort_values(by="energy_MeV").reset_index(drop=True)
+    # retained_isotopes = 0
+    # manifest = []
 
-        if len(combined_df) > MIN_VALID_POINTS:
-            csv_path = os.path.join(OUTPUT_DIR, f"{target}_g_n.csv")
-            combined_df.to_csv(csv_path, index=False)
-            retained_isotopes += 1
+    # # Filter and export isotopes satisfying dataset threshold (> 20 valid points)
+    # for target, dfs in isotopes_data.items():
+    #     combined_df = pd.concat(dfs, ignore_index=True)
+    #     # Drop duplicates across energy coordinate
+    #     combined_df = combined_df.drop_duplicates(
+    #         subset=["energy_MeV", "cross_section_mb"]
+    #     )
+    #     combined_df = combined_df.sort_values(by="energy_MeV").reset_index(drop=True)
 
-            manifest.append(
-                {
-                    "target": target,
-                    "mass_A": parse_target_a(target),
-                    "valid_points": len(combined_df),
-                    "min_energy": combined_df["energy_MeV"].min(),
-                    "max_energy": combined_df["energy_MeV"].max(),
-                    "file_path": csv_path,
-                }
-            )
+    #     if len(combined_df) > MIN_VALID_POINTS:
+    #         csv_path = os.path.join(OUTPUT_DIR, f"{target}_g_n.csv")
+    #         combined_df.to_csv(csv_path, index=False)
+    #         retained_isotopes += 1
 
-    manifest_df = pd.DataFrame(manifest).sort_values(by="mass_A").reset_index(drop=True)
-    manifest_df.to_csv(os.path.join(OUTPUT_DIR, "dataset_manifest.csv"), index=False)
+    #         manifest.append(
+    #             {
+    #                 "target": target,
+    #                 "mass_A": parse_target_a(target),
+    #                 "valid_points": len(combined_df),
+    #                 "min_energy": combined_df["energy_MeV"].min(),
+    #                 "max_energy": combined_df["energy_MeV"].max(),
+    #                 "file_path": csv_path,
+    #             }
+    #         )
 
-    print("\nExtraction Complete:")
-    print(f"- Total qualified isotopes retained: {retained_isotopes}")
-    print(f"- Processed files saved in: {os.path.abspath(OUTPUT_DIR)}")
-    print(
-        f"- Manifest summary written to: {os.path.join(OUTPUT_DIR, 'dataset_manifest.csv')}"
-    )
+    # manifest_df = pd.DataFrame(manifest).sort_values(by="mass_A").reset_index(drop=True)
+    # manifest_df.to_csv(os.path.join(OUTPUT_DIR, "dataset_manifest.csv"), index=False)
+
+    # print("\nExtraction Complete:")
+    # print(f"- Total qualified isotopes retained: {retained_isotopes}")
+    # print(f"- Processed files saved in: {os.path.abspath(OUTPUT_DIR)}")
+    # print(
+    #     f"- Manifest summary written to: {os.path.join(OUTPUT_DIR, 'dataset_manifest.csv')}"
+    # )
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    main()

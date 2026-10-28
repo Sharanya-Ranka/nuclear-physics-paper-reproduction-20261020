@@ -57,6 +57,43 @@ Bremsstrahlung spectrum average Cross section for 96Ru(gamma,n)95Ru
 (( Cross section for 206Pb(gamma,n)205Pb )+( Cross section for 206Pb(gamma,n+p)204Tl ))
     Inherent sum of cross sections. In this case, Gemini tells me this is because the detectors used in the facilities could not detect protons, and hence you cannot separate these two reactions.
 
-    
+Cross section for electric polarity given for 207Pb(gamma,n)206Pb ( / magnetic polarity)
+    The photons that were used here were of a specific polarity (polarity effects on cross section). Our experiments consider a single energy, but within that all polarities, so this is not valid. 
+
+Relative data Cross section for 16O(gamma,n)15O
+    The values here will likely be ratios, which we don't want. Gemini tells me the detectors might not be sensitive enough to measure actual values, but can measure relative differences (perhaps via anotther detector measuring some effect of this reaction)
+
+[1] Cross section for 116Sn(gamma,n)115Sn, Corrected for energy spread of LCS beam based on the Taylor expansion method; [2] Cross section for 116Sn(gamma,n)115Sn, Corrected for energy spread of LCS beam based on the least square method; [3] Cross section for 116Sn(gamma,n)115Sn, Average cross sections for two methods
+    The LCS (Laser Compton Backscattering) beam is quasi-monoenergetic (the distribution has a large spike at one energy, with very low amplitudes at other energies.) Techniques like Taylor approximations are used to approximate the curve, and provide the true "single energy" cross section. Similarly for least squares (a different technique to approximate the same value). And these may be averaged. I've not considered them for simplicity.
+
+
+
+After extracting relevant datasets (through X4Entry.getSimplifiedDataSets()), we get datasets for cross sections having various formats. A comprehensive list is below:
+[['EN-RES', 'MEV'], ['DATA', 'MB'], ['FLAG', 'NO-DIM']]
+[['Energy', 'MeV'], ['Data', 'barns']]
+[['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['DATA-ERR', 'ARB-UNITS']]
+[['E-MIN', 'MEV'], ['E-MAX', 'MEV'], ['EN', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']]
+[['Energy', 'MeV'], ['Data', 'barns'], ['d(Energy)', 'MeV'], ['d(Data)', 'barns']]
+[['E-LVL', 'MEV'], ['EN', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']]
+[['POLAR', 'NO-DIM'], ['EN-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']]
+[['E-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['ERR-S', 'ARB-UNITS']]
+[['Energy', 'MeV'], ['Data', 'barns'], ['d(Energy)', 'MeV']]
+[['E-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS']]
+[['EN-RES', 'MEV'], ['DATA', 'MB']]
+[['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['ERR-S', 'ARB-UNITS']]
+[['Energy', 'MeV'], ['Data', 'barns'], ['d(Data)', 'barns']]
+
+At a minimum, we're looking for 
+[['Energy', 'MeV'], ['Data', 'barns']]
+
+with error bars around them as bonus information.
+
+What concerns me are
+1) presence of what seems to be Arbitrary units (ARB-UNITS) - these may need to be handled case by case.
+2) E-MIN/MAX/RES etc labels. While I see these are related to energy, I do not know what specifically they measure (or whether they are even consistent from table to table). A spot check shows EN-MAX being constant across rows in 1 table, but not constant in another.
+
+Perhaps I can process only a few of these datasets first, complete the initial pipeline, and then come back to gather more data.
+
+
 
 
