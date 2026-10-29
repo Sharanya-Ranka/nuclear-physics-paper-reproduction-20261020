@@ -119,7 +119,11 @@ def make_df(dataset):
 
 def make_json(df, reaction, dataset_key):
     obj = dict(
-        metadata=dict(reaction=str(reaction), dataset_key=dataset_key),
+        metadata=dict(
+            reaction_str=str(reaction),
+            reaction_repr=reaction.__repr__(),
+            dataset_key=dataset_key,
+        ),
         columns=df.columns.tolist(),
         values=df.values.tolist(),
     )
@@ -143,7 +147,7 @@ def main():
     not_collect = []
     all_reactions = []
     all_data = []
-    breakpoint()
+    # breakpoint()
 
     for ent, subentries in list(results.items()):
         print(f"On entry: {ent}")
@@ -174,6 +178,7 @@ def main():
                     df = make_df(dataset)
                     print(f"{str(dataset.reaction[0])}")
                     print(df)
+                    # breakpoint()
                     json_obj = make_json(df, reaction, dataset_key)
                     all_data.append(json_obj)
                     # breakpoint()
@@ -182,8 +187,10 @@ def main():
                 #     collect.append(reaction)
                 # else:
                 #     not_collect.append(reaction)
-            except Exception as e:
+            except KeyError as ke:
                 pass
+            except Exception as e:
+                raise
 
         # breakpoint()
         # for subent in subentries:

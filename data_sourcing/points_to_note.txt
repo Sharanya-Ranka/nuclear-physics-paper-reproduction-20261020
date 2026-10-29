@@ -68,20 +68,20 @@ Relative data Cross section for 16O(gamma,n)15O
 
 
 
-After extracting relevant datasets (through X4Entry.getSimplifiedDataSets()), we get datasets for cross sections having various formats. A comprehensive list is below:
-[['EN-RES', 'MEV'], ['DATA', 'MB'], ['FLAG', 'NO-DIM']]
-[['Energy', 'MeV'], ['Data', 'barns']]
-[['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['DATA-ERR', 'ARB-UNITS']]
-[['E-MIN', 'MEV'], ['E-MAX', 'MEV'], ['EN', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']]
-[['Energy', 'MeV'], ['Data', 'barns'], ['d(Energy)', 'MeV'], ['d(Data)', 'barns']]
-[['E-LVL', 'MEV'], ['EN', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']]
-[['POLAR', 'NO-DIM'], ['EN-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']]
-[['E-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['ERR-S', 'ARB-UNITS']]
-[['Energy', 'MeV'], ['Data', 'barns'], ['d(Energy)', 'MeV']]
-[['E-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS']]
-[['EN-RES', 'MEV'], ['DATA', 'MB']]
-[['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['ERR-S', 'ARB-UNITS']]
-[['Energy', 'MeV'], ['Data', 'barns'], ['d(Data)', 'barns']]
+After extracting relevant datasets (through X4Entry.getSimplifiedDataSets()), we get datasets for cross sections having various formats. A comprehensive list is below. The count of datasets for each heading is listed along with it.
+[['E-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['ERR-S', 'ARB-UNITS']] --- {'datasets_count': 2, 'datapoints_count': 81}
+[['E-MIN', 'MEV'], ['E-MAX', 'MEV'], ['EN', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']] --- {'datasets_count': 1, 'datapoints_count': 43}
+[['E-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS']] --- {'datasets_count': 1, 'datapoints_count': 40}
+[['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['ERR-S', 'ARB-UNITS']] --- {'datasets_count': 5, 'datapoints_count': 31}
+[['EN-RES', 'MEV'], ['DATA', 'MB']] --- {'datasets_count': 1, 'datapoints_count': 6}
+[['Energy', 'MeV'], ['Data', 'barns'], ['d(Energy)', 'MeV'], ['d(Data)', 'barns']] --- {'datasets_count': 36, 'datapoints_count': 550}
+[['EN-RES', 'MEV'], ['DATA', 'MB'], ['FLAG', 'NO-DIM']] --- {'datasets_count': 1, 'datapoints_count': 7}
+[['EN-MAX', 'MEV'], ['DATA', 'ARB-UNITS'], ['DATA-ERR', 'ARB-UNITS']] --- {'datasets_count': 2, 'datapoints_count': 26}
+[['Energy', 'MeV'], ['Data', 'barns']] --- {'datasets_count': 10, 'datapoints_count': 647}
+[['E-LVL', 'MEV'], ['EN', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']] --- {'datasets_count': 3, 'datapoints_count': 115}
+[['POLAR', 'NO-DIM'], ['EN-MIN', 'MEV'], ['EN-MAX', 'MEV'], ['DATA', 'MB'], ['DATA-ERR', 'MB']] --- {'datasets_count': 1, 'datapoints_count': 8}
+[['Energy', 'MeV'], ['Data', 'barns'], ['d(Energy)', 'MeV']] --- {'datasets_count': 1, 'datapoints_count': 1}
+[['Energy', 'MeV'], ['Data', 'barns'], ['d(Data)', 'barns']] --- {'datasets_count': 140, 'datapoints_count': 4938}
 
 At a minimum, we're looking for 
 [['Energy', 'MeV'], ['Data', 'barns']]
@@ -95,5 +95,18 @@ What concerns me are
 Perhaps I can process only a few of these datasets first, complete the initial pipeline, and then come back to gather more data.
 
 
+Re-read the PINN modeling in the paper. It has several loss terms
+1) MSE loss (Standard)
+2) Lorentzian - Penalizes non Lorentzian like shapes for the function sigma(energy) (the form is 1/((x- c)^2 + 1)).
+    $$\sigma(E_\gamma) = \frac{\sigma_1 E_\gamma^2 \Gamma_1^2}{(E_\gamma^2 - E_1^2)^2 + E_\gamma^2 \Gamma_1^2}$$
+    E_1 represents the GDR energy (energy at which the nucleus has the highest chance of absorbing the photon, and entering into resonance). \Gamma_1 represents the width of the function (in MeV) at which the cross section drops to half its maximum value. \sigma_1 represents the peak cross section (y value). Together, these parameterize the Lorentzian curve. Since our PINN works with normalized data, \sigma_1 is 1, whereas \Gamma_1 and E_1 need to be normalized.
+3) L_{mono} - Discourages upward slopes beyond the GDR peak. This makes sense since measurement noise might induce an upward slope. However, I wonder whether the Lorentzian doesn't handle this implicitly?
+4) Threshold loss - Forces sigma = 0 below the neutron separation (Sn) energy. 
 
+We need information about \Gamma_1, E_1 and Sn to fully specify the loss function. Sn is available from the ame2020 data, E_1 and \Gamma_1 are available from RIPL-3 and the output-target for prediction (sigma) is available through EXFOR.
+
+
+I've begun developing the PINN model using Pytorch Lightning.
+Used a training script developed by Gemini, but it seems to use different loss functions, and does not select for the (A,Z) combo we want to train on.
+So I'll create a separate version.
 

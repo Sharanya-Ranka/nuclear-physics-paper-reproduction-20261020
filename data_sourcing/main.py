@@ -2,8 +2,14 @@ from other_nuclear_features.download_files import main
 from other_nuclear_features.parse_ame2020 import parse_mass_table
 from other_nuclear_features.parse_nubase_features import parse_nubase
 
-from exfor.extract_data import main
-from exfor.check_exfor_data_variety import main
+# from exfor.extract_data import main
+
+# from exfor.check_exfor_data_variety import main
+
+# from exfor.exfor_data_processing import main
+from exfor.plot_data import main
+
+# from ripl.gdr import main
 
 # import exfor.check_reactions
 
