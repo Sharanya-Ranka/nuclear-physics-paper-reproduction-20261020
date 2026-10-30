@@ -1,0 +1,15 @@
+
+EXFOR data - What kinds of systems / experiments give you photons at a single energy?
+
+RIPL values - Apparently RIPL has its own library to parse. Faraaz had used a different file for GDR data (to check)
+GDR parameters source do you filter out theoretically derived values (for lorentzian loss in PINN)
+
+
+Paper - PINN - Figure 6: The "unconstrained" experiment does not actually demonstrate unphysical behaviour. It seems like some constraints (sigma(E < Sn) = 0) might have been left in. To check.
+
+L_{mono} - What is the exact loss function? RELU penalized derivative is not fully specific.
+
+
+What filtering on EXFOR data did they use?
+We currently only use data for reactions of the type "Cross section for 237Np(gamma,n)236Np" or "Partial cross section ...." and then also filter the resulting datasets to ones containing at minimum [['Energy', 'MeV'], ['Data', 'barns']]
+They have far more data, but some of it seems to be inconsistent (refer to Pb PINN fit graph to check underlying experimenal data - Figure 3)
